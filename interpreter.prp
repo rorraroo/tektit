@@ -1,0 +1,106 @@
+use functions "funcs.prp"
+import from functions Token Outcome produced empty_value divided_by_zero overflowed concat arity_of apply is_true letter_address keyword peek_value push_value pop_value drop_value fetch_value commit_value switch_reference print_num print_char arithmetic Arithmetic plus minus times over equals below above end
+
+export choice Type success underflow empty zero_division overflow unmatched invalid end
+export record Output Type type int token_num end
+choice Pairing paired map int int unpaired int end
+
+define map string keyword keywords map_of string keyword
+    "." peek_value
+    "," push_value
+    "!" pop_value
+    "~" drop_value
+    "^" fetch_value
+    "@" commit_value
+    "%" switch_reference
+    "#" print_num
+    "$" print_char
+    "+" arithmetic plus
+    "-" arithmetic minus
+    "*" arithmetic times
+    "/" arithmetic over
+    "=" arithmetic equals
+    "<" arithmetic below
+    ">" arithmetic above
+end
+
+function Pairing pair_brackets list string tokens block
+    define map int int partners map_of int int end
+    define list int open list_of int end
+    for int position in positions_of tokens block
+        define string token get tokens position
+        if equal token "[" set open push open position
+        else if equal token "]" block
+            if equal length_of open 0 return unpaired position
+            define int last subtract length_of open 1
+            define int start get open last
+            set open remove open last
+            set partners put partners start position
+            set partners put partners position start
+        end
+    end
+    if greater length_of open 0 return unpaired get open subtract length_of open 1
+    return paired partners
+end
+
+function bool is_bracket string token block
+    return or equal token "[" equal token "]"
+end
+
+function option int first_invalid list string tokens block
+    for int position in positions_of tokens block
+        define string token get tokens position
+        if not or is_bracket token has keywords token
+            if is_none process token return some position
+    end
+    return none int
+end
+
+export function Output run list string tokens block
+    if_some int position first_invalid tokens return Output invalid position
+
+    define map int int partners map_of int int end
+    match pair_brackets tokens
+        when paired found set partners found
+        when unpaired position return Output unmatched position
+    end
+
+    define list Token memory list_of Token end
+    define int position 0
+    while less position length_of tokens block
+        define string token get tokens position
+        if is_bracket token block
+            if equal length_of memory 0 return Output underflow position
+            define int last subtract length_of memory 1
+            define bool condition is_true get memory last
+            set memory remove memory last
+            if equal token "[" block
+                if not condition set position get partners position
+            end
+            else if condition set position get partners position
+        end
+        else if has keywords token block
+            define keyword operation get keywords token
+            define int needed arity_of operation
+            if greater needed length_of memory return Output underflow position
+            define int kept subtract length_of memory needed
+            match apply operation slice memory kept needed
+                when produced results set memory concat slice memory 0 kept results
+                when empty_value return Output empty position
+                when divided_by_zero return Output zero_division position
+                when overflowed return Output overflow position
+            end
+        end
+        else if_some Token value process token set memory push memory value
+        else return Output invalid position
+        set position add position 1
+    end
+
+    return Output success -1
+end
+
+function option Token process string input block
+    if_some int number attempt convert int input return some Token false list_of int number end
+    if_some int address letter_address input return some Token true list_of int address end
+    return none Token
+end

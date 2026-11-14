@@ -1,0 +1,42 @@
+use files library
+import from files load_lines end
+
+function bool is_digit string character block
+    return has list_of string "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" end character
+end
+
+function bool is_blank string character block
+    return or equal character " " equal character "\t"
+end
+
+function bool starts_negative string line int position block
+    if not equal get line position "-" return false
+    if not less add position 1 length_of line return false
+    return is_digit get line add position 1
+end
+
+export function option list string parse_file string file block
+    if_some list string lines attempt load_lines file block
+        define list string tokens list_of string end
+        for string line in lines block
+            define string number ""
+            define int position 0
+            while less position length_of line block
+                define string character get line position
+                if is_digit character set number add number character
+                else block
+                    if not equal number "" block
+                        set tokens push tokens number
+                        set number ""
+                    end
+                    if starts_negative line position set number "-"
+                    else if not is_blank character set tokens push tokens character
+                end
+                set position add position 1
+            end
+            if not equal number "" set tokens push tokens number
+        end
+        return some tokens
+    end
+    return none list string
+end

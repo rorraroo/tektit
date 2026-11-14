@@ -1,0 +1,204 @@
+export record Token bool ref list int n end
+export choice Arithmetic plus minus times over equals below above end
+export choice keyword peek_value push_value pop_value drop_value fetch_value commit_value switch_reference print_num print_char arithmetic Arithmetic end
+export choice Outcome produced list Token empty_value divided_by_zero overflowed end
+
+define list string characters list_of string
+    "" "" "" "" "" "" "" "" "" "\t" "\n" "" "" "\r" "" ""
+    "" "" "" "" "" "" "" "" "" "" "" "" "" "" "" ""
+    " " "!" "\"" "#" "$" "%" "&" "'" "(" ")" "*" "+" "," "-" "." "/"
+    "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" ":" ";" "<" "=" ">" "?"
+    "@" "A" "B" "C" "D" "E" "F" "G" "H" "I" "J" "K" "L" "M" "N" "O"
+    "P" "Q" "R" "S" "T" "U" "V" "W" "X" "Y" "Z" "[" "\\" "]" "^" "_"
+    "`" "a" "b" "c" "d" "e" "f" "g" "h" "i" "j" "k" "l" "m" "n" "o"
+    "p" "q" "r" "s" "t" "u" "v" "w" "x" "y" "z" "{" "|" "}" "~" ""
+end
+
+function bool is_letter_address int address block
+    if and at_least address 65 at_most address 90 return true
+    return and at_least address 97 at_most address 122
+end
+
+export function option int letter_address string input block
+    for int address in positions_of characters
+        if and is_letter_address address equal get characters address input return some address
+    return none int
+end
+
+define map int list int values map_of int list int end
+
+export function list Token concat list Token first list Token second block
+    define list Token joined first
+    for Token token in second set joined push joined token
+    return joined
+end
+
+function int wrap_address int address block
+    define int count length_of characters
+    return modulo add modulo address count count count
+end
+
+function list int variable_at int address block
+    define int wrapped wrap_address address
+    if has values wrapped return get values wrapped
+    return list_of int end
+end
+
+function Token apply_dereference Token token block
+    if not the ref of token return token
+    define list int contents list_of int end
+    for int address in the n of token
+        for int item in variable_at address set contents push contents item
+    return Token false contents
+end
+
+function void assign list int addresses list int data block
+    define int extra subtract length_of data subtract length_of addresses 1
+    for int position in positions_of addresses block
+        define list int share list_of int end
+        define int source add extra subtract position 1
+        if equal position 0 block
+            if greater extra 0 set share slice data 0 extra
+        end
+        else if at_least source 0 set share list_of int get data source end
+        set values put values wrap_address get addresses position share
+    end
+end
+
+function Outcome nothing block
+    return produced list_of Token end
+end
+
+function Outcome one Token token block
+    return produced list_of Token token end
+end
+
+function Token literal_of int number block
+    return Token false list_of int number end
+end
+
+function Outcome peek Token token block
+    define list int contents the n of apply_dereference token
+    if equal length_of contents 0 return empty_value
+    return produced list_of Token token literal_of get contents subtract length_of contents 1 end
+end
+
+function Outcome push_values Token start Token added block
+    define list int joined the n of start
+    for int number in the n of added set joined push joined number
+    return one Token the ref of start joined
+end
+
+function Outcome pop Token token block
+    if not the ref of token block
+        define list int contents the n of token
+        if equal length_of contents 0 return empty_value
+        define int end_position subtract length_of contents 1
+        return produced list_of Token Token false slice contents 0 end_position literal_of get contents end_position end
+    end
+    for int address in reverse the n of token block
+        define list int contents variable_at address
+        if greater length_of contents 0 block
+            define int last subtract length_of contents 1
+            set values put values wrap_address address slice contents 0 last
+            return produced list_of Token token literal_of get contents last end
+        end
+    end
+    return empty_value
+end
+
+function Outcome commit Token data Token target block
+    assign the n of target the n of apply_dereference data
+    return nothing
+end
+
+function Outcome switch_reference_of Token token block
+    return one copy token with ref not the ref of token end
+end
+
+function Outcome print_numbers Token token block
+    for int number in reverse the n of apply_dereference token write convert string number
+    return nothing
+end
+
+function Outcome print_characters Token token block
+    for int address in reverse the n of apply_dereference token write get characters wrap_address address
+    return nothing
+end
+
+export function bool is_true Token token block
+    define list int contents the n of apply_dereference token
+    if equal length_of contents 0 return false
+    return not equal get contents subtract length_of contents 1 0
+end
+
+function int truth bool condition block
+    if condition return 1
+    return 0
+end
+
+function option int compute Arithmetic kind int left int right block
+    match kind
+        when plus return attempt add left right
+        when minus return attempt subtract left right
+        when times return attempt multiply left right
+        when over return attempt divide left right
+        when equals return some truth equal left right
+        when below return some truth less left right
+        when above return some truth greater left right
+    end
+end
+
+function Outcome combine Arithmetic kind Token left_token Token right_token block
+    define list int left the n of apply_dereference left_token
+    define list int right the n of apply_dereference right_token
+    define list int result list_of int end
+    define int size larger_of length_of left length_of right
+    define int left_start subtract size length_of left
+    define int right_start subtract size length_of right
+    define int position 0
+    while less position size block
+        define int left_index subtract position left_start
+        define int right_index subtract position right_start
+        if less right_index 0 set result push result get left left_index
+        else if less left_index 0 set result push result get right right_index
+        else block
+            define int right_value get right right_index
+            if and equal kind over equal right_value 0 return divided_by_zero
+            if_some int value compute kind get left left_index right_value set result push result value
+            else return overflowed
+        end
+        set position add position 1
+    end
+    return one Token false result
+end
+
+export function int arity_of keyword operation block
+    match operation
+        when peek_value return 1
+        when push_value return 2
+        when pop_value return 1
+        when drop_value return 1
+        when fetch_value return 1
+        when commit_value return 2
+        when switch_reference return 1
+        when print_num return 1
+        when print_char return 1
+        when arithmetic kind return 2
+    end
+end
+
+export function Outcome apply keyword operation list Token args block
+    match operation
+        when peek_value return peek get args 0
+        when push_value return push_values get args 0 get args 1
+        when pop_value return pop get args 0
+        when drop_value return nothing
+        when fetch_value return one apply_dereference get args 0
+        when commit_value return commit get args 0 get args 1
+        when switch_reference return switch_reference_of get args 0
+        when print_num return print_numbers get args 0
+        when print_char return print_characters get args 0
+        when arithmetic kind return combine kind get args 0 get args 1
+    end
+end

@@ -1,0 +1,40 @@
+use program library
+use lexer "lexer.prp"
+use interpreter "interpreter.prp"
+import from program arguments end
+import from lexer parse_file end
+import from interpreter run Output Type underflow empty zero_division overflow unmatched success invalid end
+
+if equal length_of arguments 0 block
+    write_error_line "usage: tektit <file>"
+    exit 2
+end
+
+define list string tokens list_of string end
+if_some list string lexed parse_file get arguments 0 set tokens lexed
+else block
+    write_error_line "ERROR: An error occured while loading the file."
+    exit 1
+end
+
+define Output output run tokens
+
+write_line ""
+define int t the token_num of output
+define string st convert string the token_num of output
+match the type of output
+    when underflow
+        write_error_line fill "ERROR: The token number {} \"{}\" experienced argument underflow due to too little arguments." list_of string st get tokens t end
+    when empty
+        write_error_line fill "ERROR: The token number {} \"{}\" read from an empty value." list_of string st get tokens t end
+    when zero_division
+        write_error_line fill "ERROR: The token number {} \"{}\" divided by zero." list_of string st get tokens t end
+    when overflow
+        write_error_line fill "ERROR: The token number {} \"{}\" produced a number too large to store." list_of string st get tokens t end
+    when unmatched
+        write_error_line fill "ERROR: The token number {} \"{}\" has no matching bracket." list_of string st get tokens t end
+    when invalid
+        write_error_line fill "ERROR: The token number {} \"{}\" is not a number, a letter or an operation." list_of string st get tokens t end
+    when success
+        write_line "Code executed successfully!"
+end
